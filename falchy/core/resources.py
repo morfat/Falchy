@@ -217,7 +217,7 @@ class ListResourceMixin:
 
 class ListResource(ListResourceMixin , BaseResource):
 
-    def on_get(self,req, resp):
+    def on_get(self,req, resp,**kwargs):
         db = self.get_db(req)
         query_params = req.params 
 
@@ -231,7 +231,7 @@ class ListResource(ListResourceMixin , BaseResource):
 
 class RetrieveResource(RetrieveResourceMixin , BaseResource):
 
-    def on_get(self,req, resp,pk):
+    def on_get(self,req, resp,pk,**kwargs):
         db = self.get_db(req)
         result = self.retrieve(req,resp,db,pk)
 
@@ -246,7 +246,7 @@ class RetrieveResource(RetrieveResourceMixin , BaseResource):
 
 class DestroyResource(DestroyResourceMixin , BaseResource):
 
-    def on_delete(self,req, resp,pk):
+    def on_delete(self,req, resp,pk,**kwargs):
         db = self.get_db(req)
         result = self.get_object_or_404(db,pk)
 
@@ -259,7 +259,7 @@ class DestroyResource(DestroyResourceMixin , BaseResource):
 
 class CreateResource(CreateResourceMixin , BaseResource):
 
-    def on_post(self,req, resp):
+    def on_post(self,req, resp,**kwargs):
         db = self.get_db(req)
         posted_data = req.media
 
@@ -278,7 +278,7 @@ class CreateResource(CreateResourceMixin , BaseResource):
 
 class UpdateResource(UpdateResourceMixin , BaseResource):
 
-    def on_patch(self,req, resp,pk):
+    def on_patch(self,req, resp,pk,**kwargs):
 
         db = self.get_db(req)
         new_data = req.media

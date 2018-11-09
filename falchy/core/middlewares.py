@@ -64,8 +64,6 @@ class AuthMiddleWare:
         return req.context['db']
         
     def process_resource(self,req,resp,resource,params):
-        print( req.env )
-        
         if req.method != 'OPTIONS':
             
             must_login = True
