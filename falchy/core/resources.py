@@ -1,6 +1,6 @@
 import falcon 
 
-from .pagination import Paginator
+from .paginators import CursorPaginator
 
 class BaseResource:
 
@@ -10,7 +10,7 @@ class BaseResource:
 
     SEARCH_QUERY_PARAM_NAME = 'q'
 
-    paginator_class = Paginator
+    paginator_class = CursorPaginator
     multitenant = True
 
   

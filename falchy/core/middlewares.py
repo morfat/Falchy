@@ -1,7 +1,7 @@
 
 
-from falchemy_rest import auth
-from falchemy_rest import sql
+from falchy.core import auth
+from falchy.db import sql
 import falcon 
 
 class CoreMiddleWare:
