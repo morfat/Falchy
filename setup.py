@@ -14,7 +14,7 @@ setup(name='falchy',
         'Programming Language :: Python :: 3.5'
       ],
       keywords='Falcon REST Python3 ',
-      url='http://github.com/storborg/funniest',
+      url='https://github.com/morfat/Falchy',
       author='Morfat Mosoti',
       author_email='morfatmosoti@gmail.com',
       license='MIT',
