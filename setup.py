@@ -4,7 +4,7 @@ def readme():
     with open('README.rst') as f:
         return f.read()
 
-setup(name='falchemy_rest',
+setup(name='falchy',
       version='0.1',
       description=' Core Library for FalchyRest and FalchyAuth projects ',
       long_description=readme(),
