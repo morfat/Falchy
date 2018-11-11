@@ -1,7 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.ext.declarative import has_inherited_table
 
-from sqlalchemy import Column, Integer, String, Boolean,DateTime,Date,ForeignKey,Numeric,UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean,DateTime,Date,ForeignKey,Numeric,UniqueConstraint, Float
 
 
 #define model fields
@@ -30,6 +30,9 @@ def TenantField(**kwargs):
 
 def DecimalField(max_digits,decimal_places,*args,**kwargs):
     return Column(Numeric(precision = max_digits, scale = decimal_places),*args,**kwargs)
+
+def FloatField(*args,**kwargs):
+    return Column(Float,*args,**kwargs)
 
 def UniqueTogether(*args,**kwargs):
     return UniqueConstraint(*args,**kwargs)

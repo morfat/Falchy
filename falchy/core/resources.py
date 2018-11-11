@@ -64,18 +64,12 @@ class BaseResource:
         except KeyError:
             return None
     
-    def get_resource_tenant(self,req):
+    def get_authenticated_application(self,req):
         try:
-            return req.context['resource_tenant']
+            return req.context['authenticated_application']
         except KeyError:
             return None
-
-    def get_resource_app(self,req):
-        try:
-            return req.context['resource_app']
-        except KeyError:
-            return None
-
+    
     def get_auth_tenant_id(self,req):
         auth = self.get_auth_data(req)
         return auth.get("tenant_id")
