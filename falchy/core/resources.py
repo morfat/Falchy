@@ -12,14 +12,31 @@ class BaseResource:
 
     paginator_class = CursorPaginator
     multitenant = True
+    multi_organization = False #means the resoruce is for multiple organizations.
+   
+    
+    ON_POST_MESSAGE = 'Created'
+    ON_PATCH_MESSAGE = 'Updated'
+    ON_DELETE_MESSAGE = 'Deleted'
+
+
+    
 
   
 
     def get_queryset(self,req,**kwargs):
-        if self.multitenant:
-            return self.model.all().where( self.model.tenant_id == self.get_auth_tenant_id(req) )
+        organization_id = kwargs.get("organization_id")
+        print ("Got Organization", organization_id )
 
-        return self.model.all()
+        queryset = self.model.all()
+
+        if self.multitenant:
+            queryset = queryset.where( self.model.tenant_id == self.get_auth_tenant_id(req) )
+        if self.multi_organization:
+            #if organization_id:
+            queryset = queryset.where( self.model.organization_id == organization_id )
+
+        return queryset
 
         
         
@@ -27,8 +44,8 @@ class BaseResource:
         return self.serializer_class
     
 
-    def get_object(self,req,db,pk):
-        queryset = self.get_queryset(req)
+    def get_object(self,req,db,pk, **kwargs):
+        queryset = self.get_queryset(req, **kwargs)
 
         
         results = db.objects( queryset ).filter( id__eq=pk).fetch()
@@ -39,8 +56,8 @@ class BaseResource:
             return None
             
 
-    def get_object_or_404(self,req,db,pk):
-        obj = self.get_object(req,db,pk)
+    def get_object_or_404(self,req,db,pk, **kwargs):
+        obj = self.get_object(req,db,pk, **kwargs)
 
         if not obj:
             raise falcon.HTTPNotFound( title = "Not Found", description = "Record with key {pk} does not exist".format(pk = pk))
@@ -82,28 +99,34 @@ class BaseResource:
 class RetrieveResourceMixin:
 
     def retrieve(self,req,resp,db,pk,**kwargs):
-        result = self.get_object_or_404(req,db,pk)
+        result = self.get_object_or_404(req,db,pk, **kwargs)
 
         return result
 
 
 class CreateResourceMixin:
 
-    def perform_create(self,req,db,posted_data):
+    def perform_create(self,req,db,posted_data, **kwargs):
+        organization_id = kwargs.get("organization_id")
+
         if self.multitenant:
             posted_data.update({"tenant_id": self.get_auth_tenant_id(req)} )
+        
+        #if organization_id:
+        if self.multi_organization:
+            posted_data.update({"organization_id": organization_id})
 
         return db.objects( self.model.insert() ).create(**posted_data)
 
     def create(self,req,resp,db,posted_data, **kwargs):
 
-        created = self.perform_create(req,db,posted_data)
+        created = self.perform_create(req,db,posted_data, **kwargs)
 
         #get created object
         
         pk = created.get("id")
 
-        return self.get_object(req,db,pk) #db.objects( self.get_queryset(req) ).filter( id__eq = created.get("id") ).fetch()
+        return self.get_object(req,db,pk, **kwargs) #db.objects( self.get_queryset(req) ).filter( id__eq = created.get("id") ).fetch()
 
        
 
@@ -113,10 +136,16 @@ class DestroyResourceMixin:
 
     def destroy(self,req,resp,db,result,**kwargs):
         #destroy since it exists
+        organization_id = kwargs.get("organization_id")
+        queryset = db.objects( self.model.delete() ).filter( id__eq= result.get("id"))
+
         if self.multitenant:
-            db.objects( self.model.delete() ).filter( id__eq= result.get("id") , tenant_id__eq = self.get_auth_tenant_id(req) ).delete()
-        else:
-            db.objects( self.model.delete() ).filter( id__eq= result.get("id")).delete()
+            queryset = queryset.filter(  tenant_id__eq = self.get_auth_tenant_id(req) )
+        
+        #if organization_id:
+        if self.multi_organization:
+            queryset = queryset.filter( organization_id__eq=organization_id)
+        queryset = queryset.delete()
         return result
 
 class UpdateResourceMixin:
@@ -131,7 +160,7 @@ class UpdateResourceMixin:
 
         #return updated_object
          
-        return self.get_object(req,db,pk)
+        return self.get_object(req,db,pk, **kwargs)
 
 class ListResourceMixin:
 
@@ -145,7 +174,8 @@ class ListResourceMixin:
     def list(self,req,resp,db,**kwargs):
 
         query_params = req.params
-        queryset = self.get_queryset(req)
+       
+        queryset = self.get_queryset(req, **kwargs)
         queryset_object = db.objects( queryset )
 
         #1.filter
@@ -214,24 +244,25 @@ class ListResource(ListResourceMixin , BaseResource):
     def on_get(self,req, resp,**kwargs):
         db = self.get_db(req)
         query_params = req.params 
+      
 
-        results, pagination = self.list(req,resp,db)
+        results, pagination = self.list(req,resp,db,**kwargs)
 
         serializer = self.get_serializer_class()(results, many = True)
-
-
-        resp.media = {"data": serializer.valid_read_data, "pagination": pagination}
+        resp.media = {"data": serializer.valid_read_data, "pagination": pagination }
+        
+        
 
 
 class RetrieveResource(RetrieveResourceMixin , BaseResource):
 
     def on_get(self,req, resp,pk,**kwargs):
         db = self.get_db(req)
-        result = self.retrieve(req,resp,db,pk)
+        result = self.retrieve(req,resp,db,pk, **kwargs)
 
         serializer = self.get_serializer_class()(result)
        
-        resp.media = {"data": [serializer.valid_read_data] }
+        resp.media = {"data": [serializer.valid_read_data] , "message": None }
 
 
         
@@ -242,30 +273,31 @@ class DestroyResource(DestroyResourceMixin , BaseResource):
 
     def on_delete(self,req, resp,pk,**kwargs):
         db = self.get_db(req)
-        result = self.get_object_or_404(db,pk)
+        result = self.get_object_or_404(req,db,pk,**kwargs)
 
-        self.destroy(req,resp,db,result)
+        self.destroy(req,resp,db,result,**kwargs)
 
         #no content reply
 
-        resp.status = falcon.HTTP_NO_CONTENT
-
+        resp.status = falcon.HTTP_OK
+        resp.media = {"data": [], "message": self.ON_DELETE_MESSAGE }
+        
 
 class CreateResource(CreateResourceMixin , BaseResource):
 
     def on_post(self,req, resp,**kwargs):
         db = self.get_db(req)
         posted_data = req.media
+        print ("KWARGS", kwargs)
 
         serializer = self.get_serializer_class()(posted_data)
-        created_data = self.create(req,resp,db,posted_data = serializer.valid_write_data )
+        created_data = self.create(req,resp,db,posted_data = serializer.valid_write_data, **kwargs )
 
         serializer = self.get_serializer_class()(created_data)
         read_data = serializer.valid_read_data
 
-        resp.media = { "data": [ read_data ] }
-
-        resp.status = falcon.HTTP_CREATED
+        resp.media = { "data": [ read_data ], "message": self.ON_POST_MESSAGE   }
+       
 
 
 
@@ -276,19 +308,19 @@ class UpdateResource(UpdateResourceMixin , BaseResource):
 
         db = self.get_db(req)
         new_data = req.media
-        result = self.get_object_or_404(req,db,pk)
+        result = self.get_object_or_404(req,db,pk, **kwargs)
 
         write_serializer = self.get_serializer_class()(result)
 
         write_data = write_serializer.protect_data( protected_fields = write_serializer.Meta.write_protected_fields , data = new_data)
 
-        updated = self.update(req,resp,db, result = result, data = write_data)
+        updated = self.update(req,resp,db, result = result, data = write_data, **kwargs)
         
       
         read_serializer = self.get_serializer_class()(updated)
 
 
-        resp.media = { "data": [ read_serializer.valid_read_data ] }
+        resp.media = { "data": [ read_serializer.valid_read_data ], "message": self.ON_PATCH_MESSAGE  }
 
 #Grouped generic resource views
 

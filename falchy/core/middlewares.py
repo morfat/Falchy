@@ -94,12 +94,44 @@ class AuthMiddleWare:
                     raise falcon.HTTPUnauthorized(description = 'Login Required')
                 
                 req.context['auth'] = auth_data
-    
+             
     def get_secret_key(self,req):
         return self.secret_key
 
             
 
-       
+
+class MultitenantMiddleWare:
+    """ this injects tenant_id and / or organization_id to the resources. For those authenticated 
+    It injects only if the values are not provided
+    
+    """
+
+    def process_resource(self,req,resp,resource,params):
+        resource.multitenant = False
+        if req.method != 'OPTIONS':
+            
+            try:
+                auth = req.context['auth']
+            except KeyError:
+                return None
+            
+            #set organization id. check first if exists so as not to override
+
+            try:
+                organization_id = params['organization_id']
+                print ("Exists organization_id")
+            except KeyError:
+                params['organization_id'] = auth.get("organization_id")
+            
+            try:
+                tenant_id = params['tenant_id']
+                print ("Exists tenant_id")
+            except KeyError:
+                params['tenant_id'] = auth.get("tenant_id")
+            
+            print ("ORG", params['organization_id'])
+            print ("Tenant",  params['tenant_id'])
+
     
 
