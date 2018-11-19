@@ -119,8 +119,11 @@ class QuerySet:
         result = self.__execute(queryset).fetchone()
 
         return dict(result) if result else None
-        
     
+    def for_update(self):
+        self._queryset = self._queryset.with_for_update()
+        return self
+
     def delete(self):
         queryset = self._queryset
         
