@@ -1,6 +1,7 @@
 import falcon 
 
 from .paginators import CursorPaginator
+import sqlalchemy
 
 class BaseResource:
 
@@ -13,7 +14,8 @@ class BaseResource:
     paginator_class = CursorPaginator
     multitenant = True
     multi_organization = False #means the resoruce is for multiple organizations.
-   
+    organization_field_name = 'organization_id'
+    tenant_field_name = 'tenant_id'
     
     ON_POST_MESSAGE = 'Created'
     ON_PATCH_MESSAGE = 'Updated'
@@ -31,11 +33,13 @@ class BaseResource:
         queryset = self.model.all()
 
         if self.multitenant:
-            queryset = queryset.where( self.model.tenant_id == self.get_auth_tenant_id(req) )
+            queryset = queryset.where( sqlalchemy.column( self.tenant_field_name )== self.get_auth_tenant_id(req) )
+           
         if self.multi_organization:
             #if organization_id:
-            queryset = queryset.where( self.model.organization_id == organization_id )
-
+            
+            queryset = queryset.where( sqlalchemy.column(self.organization_field_name) == organization_id )
+            
         return queryset
 
         
