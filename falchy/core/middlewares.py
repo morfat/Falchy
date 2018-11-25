@@ -36,7 +36,7 @@ class CoreMiddleWare:
 class CORSMiddleWare:
     def process_response(self, req, resp, resource, req_succeeded):
         resp.set_header('Access-Control-Allow-Origin','*')
-        if (req_succeeded and req.method == 'OPTIONS' and req.get_header('Access-Control-Request-Method')):
+        if (req.method == 'OPTIONS' and req.get_header('Access-Control-Request-Method')): #req_succeeded and 
             #preflight CORS request
 
             allow = resp.get_header('Allow')
